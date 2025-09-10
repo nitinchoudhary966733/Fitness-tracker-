@@ -3,149 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🏋️ Daily Exercise Tracker</title>
+  <title>Daily Exercise Tracker</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h2 { text-align: center; }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      transition: 0.3s;
+    }
+    :root {
+      --bg: #f4f4f4;
+      --text: #000;
+      --card: #fff;
+      --button: #ddd;
+    }
+    .dark {
+      --bg: #1a1a1a;
+      --text: #fff;
+      --card: #2a2a2a;
+      --button: #444;
+    }
+    h1 { text-align: center; margin-bottom: 20px; }
+    .controls { display: flex; justify-content: space-between; margin-bottom: 15px; }
     .card {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin: 8px 0;
+      background: var(--card);
+      border-radius: 15px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .flex { display: flex; align-items: center; justify-content: space-between; }
+    .done { text-decoration: line-through; color: green; }
+    button {
+      border: none;
+      padding: 6px 10px;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      cursor: pointer;
+      margin-left: 5px;
     }
-    .notesBox { 
-      display: none; 
-      margin-top: 8px;
+    input[type="text"] {
+      width: 100%;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid #aaa;
     }
-    .buttons { display: flex; gap: 8px; }
-    button { padding: 6px 10px; border-radius: 6px; border: none; cursor: pointer; }
-    .done { background: lightgreen; }
-    .deleteBtn { background: #f88; }
-    .toggleBtn { background: #ddd; }
+    .notesBox { display: none; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <h2>🏋️ Daily Exercise Tracker</h2>
+  <div class="controls">
+    <button onclick="toggleTheme()">🌙 Toggle Theme</button>
+    <input type="date" id="datePicker" onchange="changeDate(this.value)">
+  </div>
+
+  <h1>🏋️ Daily Exercise Tracker</h1>
 
   <div id="exerciseList"></div>
 
-  <div style="margin-top:15px;">
-    <input id="newExercise" placeholder="Add new exercise" />
-    <button onclick="addExercise()">Add</button>
+  <div class="controls">
+    <input type="text" id="newExercise" placeholder="Add new exercise">
+    <button onclick="addExercise()">➕ Add</button>
   </div>
 
-  <div style="margin-top:15px;">
-    <button onclick="backup()">💾 Backup</button>
-    <button onclick="restore()">📂 Restore</button>
+  <div class="controls">
+    <button onclick="backupData()">💾 Backup</button>
+    <button onclick="restoreData()">📂 Restore</button>
     <button onclick="clearAll()">🗑 Clear</button>
   </div>
 
   <script>
-    const today = new Date().toISOString().split('T')[0];
-    if (!localStorage.getItem(today)) {
-      localStorage.setItem(today, JSON.stringify([
-        { name: "Running", done: false, notes: "" },
-        { name: "Push-ups", done: false, notes: "" },
-        { name: "Squats", done: false, notes: "" },
-        { name: "Plank", done: false, notes: "" },
-        { name: "Yoga", done: false, notes: "" }
-      ]));
-    }
+    const defaultExercises = ["Running", "Push-ups", "Squats", "Plank", "Yoga"];
+    let selectedDate = new Date().toISOString().split("T")[0];
+    let data = JSON.parse(localStorage.getItem("exerciseData")) || {};
 
     function getDayData() {
-      return JSON.parse(localStorage.getItem(today));
+      if (!data[selectedDate]) {
+        data[selectedDate] = defaultExercises.map(name => ({ name, done: false, notes: "" }));
+      }
+      return data[selectedDate];
     }
 
-    function saveData(data) {
-      localStorage.setItem(today, JSON.stringify(data));
+    function saveData() {
+      localStorage.setItem("exerciseData", JSON.stringify(data));
     }
 
     function renderExercises() {
       const container = document.getElementById("exerciseList");
       container.innerHTML = "";
-      getDayData().forEach((ex, index) => {
+      getDayData().forEach((ex, i) => {
         const card = document.createElement("div");
         card.className = "card";
+
         card.innerHTML = `
-          <span>${ex.name}</span>
-          <div class="buttons">
-            <button onclick="toggleDone(${index})" class="${ex.done ? 'done' : ''}">Mark</button>
-            <button class="toggleBtn" onclick="toggleNotes(this, ${index})">v</button>
-            <button class="deleteBtn" onclick="deleteExercise(${index})">🗑</button>
+          <div class="flex">
+            <span class="${ex.done ? "done" : ""}">${ex.name}</span>
+            <div>
+              <button style="background:${ex.done ? '#4CAF50' : 'var(--button)'}" onclick="toggleDone(${i})">
+                ${ex.done ? "Done" : "Mark"}
+              </button>
+              <button class="toggleNotes" onclick="toggleNotes(this, ${i})">∨</button>
+              <button onclick="deleteExercise(${i})">🗑</button>
+            </div>
           </div>
           <div class="notesBox">
-            <input type="text" value="${ex.notes}" 
-              oninput="updateNotes(${index}, this.value)" 
-              placeholder="Notes (e.g. 20 reps)">
+            <input type="text" placeholder="Notes (e.g. 20 reps, 2km, 5min)"
+              value="${ex.notes}" onchange="updateNotes(${i}, this.value)">
           </div>
         `;
         container.appendChild(card);
       });
+      saveData();
     }
 
     function toggleDone(index) {
-      const data = getDayData();
-      data[index].done = !data[index].done;
-      saveData(data);
+      getDayData()[index].done = !getDayData()[index].done;
       renderExercises();
     }
 
     function updateNotes(index, value) {
-      const data = getDayData();
-      data[index].notes = value;
-      saveData(data);
+      getDayData()[index].notes = value;
+      saveData();
     }
 
     function toggleNotes(btn, index) {
       const box = btn.closest(".card").querySelector(".notesBox");
       if (box.style.display === "none" || box.style.display === "") {
         box.style.display = "block";
-        btn.textContent = "^";
+        btn.textContent = "∧";
       } else {
         box.style.display = "none";
-        btn.textContent = "v";
+        btn.textContent = "∨";
       }
     }
 
     function addExercise() {
       const name = document.getElementById("newExercise").value.trim();
       if (name) {
-        const data = getDayData();
-        data.push({ name, done: false, notes: "" });
-        saveData(data);
+        getDayData().push({ name, done: false, notes: "" });
         document.getElementById("newExercise").value = "";
         renderExercises();
       }
     }
 
     function deleteExercise(index) {
-      const data = getDayData();
-      data.splice(index, 1);
-      saveData(data);
+      getDayData().splice(index, 1);
       renderExercises();
     }
 
-    function backup() {
-      const blob = new Blob([localStorage.getItem(today)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "backup.json";
-      a.click();
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
     }
 
-    function restore() {
+    function changeDate(date) {
+      selectedDate = date;
+      renderExercises();
+    }
+
+    function backupData() {
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "exercise_backup.json";
+      link.click();
+    }
+
+    function restoreData() {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = "application/json";
-      input.onchange = e => {
+      input.accept = ".json";
+      input.onchange = (e) => {
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = () => {
-          localStorage.setItem(today, reader.result);
-          renderExercises();
+          try {
+            data = JSON.parse(reader.result);
+            saveData();
+            renderExercises();
+          } catch {
+            alert("Invalid backup file");
+          }
         };
         reader.readAsText(file);
       };
@@ -153,12 +191,15 @@
     }
 
     function clearAll() {
-      if (confirm("Clear all exercises for today?")) {
-        localStorage.removeItem(today);
-        location.reload();
+      if (confirm("Clear all data?")) {
+        data = {};
+        saveData();
+        renderExercises();
       }
     }
 
+    // Init
+    document.getElementById("datePicker").value = selectedDate;
     renderExercises();
   </script>
 </body>

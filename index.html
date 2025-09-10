@@ -1,62 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Daily Exercise Tracker</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f9f9f9; padding:20px; }
-    h1 { text-align:center; }
-    .exercise { display:flex; align-items:center; margin:10px 0; }
-    label { flex:1; }
-    input[type="checkbox"] { margin-right:10px; }
-    textarea { width:100%; margin-top:10px; padding:8px; }
-    .save-btn { background:#4CAF50; color:white; padding:10px; border:none; cursor:pointer; margin-top:10px; width:100%; }
-  </style>
-</head>
-<body>
-  <h1>🏋️ Daily Exercise Tracker</h1>
+import { useState } from "react"; import { Card, CardContent } from "@/components/ui/card"; import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input";
 
-  <div class="exercise">
-    <input type="checkbox" id="running">
-    <label for="running">Running</label>
+export default function ExerciseTracker() { const defaultExercises = [ "Running", "Push-ups", "Squats", "Plank", "Yoga", ];
+
+const [exercises, setExercises] = useState( defaultExercises.map((name) => ({ name, done: false, notes: "" })) );
+
+const toggleDone = (index) => { setExercises((prev) => { const updated = [...prev]; updated[index].done = !updated[index].done; return updated; }); };
+
+const updateNotes = (index, value) => { setExercises((prev) => { const updated = [...prev]; updated[index].notes = value; return updated; }); };
+
+return ( <div className="min-h-screen bg-gray-100 p-4"> <h1 className="text-2xl font-bold mb-4 text-center">🏋️ Daily Exercise Tracker</h1>
+
+<div className="grid gap-4">
+    {exercises.map((exercise, index) => (
+      <Card key={index} className="rounded-2xl shadow-md">
+        <CardContent className="p-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className={`text-lg ${exercise.done ? "line-through text-green-600" : ""}`}>
+              {exercise.name}
+            </span>
+            <Button
+              onClick={() => toggleDone(index)}
+              className={exercise.done ? "bg-green-500" : "bg-gray-300 text-black"}
+            >
+              {exercise.done ? "Done" : "Mark Done"}
+            </Button>
+          </div>
+          <Input
+            placeholder="Add notes (e.g., 20 reps, 2km, 5min)"
+            value={exercise.notes}
+            onChange={(e) => updateNotes(index, e.target.value)}
+          />
+        </CardContent>
+      </Card>
+    ))}
   </div>
+</div>
 
-  <div class="exercise">
-    <input type="checkbox" id="pushups">
-    <label for="pushups">Push-ups</label>
-  </div>
+); }
 
-  <div class="exercise">
-    <input type="checkbox" id="plank">
-    <label for="plank">Plank</label>
-  </div>
-
-  <textarea id="details" placeholder="Write details here (e.g. 2 km running, 20 push-ups)"></textarea>
-  <button class="save-btn" onclick="saveProgress()">Save Progress</button>
-
-  <h3>Saved Log:</h3>
-  <pre id="log"></pre>
-
-  <script>
-    function saveProgress() {
-      const running = document.getElementById('running').checked ? '✅ Running done' : '❌ Running not done';
-      const pushups = document.getElementById('pushups').checked ? '✅ Push-ups done' : '❌ Push-ups not done';
-      const plank = document.getElementById('plank').checked ? '✅ Plank done' : '❌ Plank not done';
-      const details = document.getElementById('details').value;
-
-      const today = new Date().toLocaleDateString();
-      const logEntry = `📅 ${today}\n${running}\n${pushups}\n${plank}\n📝 Notes: ${details}\n\n`;
-
-      const log = document.getElementById('log');
-      log.textContent = logEntry + log.textContent;
-
-      localStorage.setItem('exerciseLog', log.textContent);
-    }
-
-    window.onload = function() {
-      document.getElementById('log').textContent = localStorage.getItem('exerciseLog') || '';
-    }
-  </script>
-</body>
-</html>
